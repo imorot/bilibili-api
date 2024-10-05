@@ -348,6 +348,7 @@ class VideoMeta:
     source: Optional[str] = None  # 可选，视频来源。
     recreate: Optional[bool] = False  # 可选，是否允许重新上传。
     no_reprint: Optional[bool] = False  # 可选，是否禁止转载。
+    no_disturbance: Optional[bool] = False,  # 可选，是否禁止转载。
     open_elec: Optional[bool] = False  # 可选，是否展示充电信息。
     up_selection_reply: Optional[bool] = False  # 可选，是否开启评论精选。
     up_close_danmu: Optional[bool] = False  # 可选，是否关闭弹幕。
@@ -376,6 +377,7 @@ class VideoMeta:
         source: Optional[str] = None,  # 可选，视频来源。
         recreate: Optional[bool] = False,  # 可选，是否允许重新上传。
         no_reprint: Optional[bool] = False,  # 可选，是否禁止转载。
+        no_disturbance: Optional[bool] = False,  # 可选，是否禁止转载。
         open_elec: Optional[bool] = False,  # 可选，是否展示充电信息。
         up_selection_reply: Optional[bool] = False,  # 可选，是否开启评论精选。
         up_close_danmu: Optional[bool] = False,  # 可选，是否关闭弹幕。
@@ -482,6 +484,7 @@ class VideoMeta:
                     raise ValueError("source 不合法或者大于 200 字")
 
         self.recreate = recreate if isinstance(recreate, bool) else False
+        self.no_disturbance if isinstance(no_disturbance, bool) else False
         self.no_reprint = no_reprint if isinstance(no_reprint, bool) else False
         self.open_elec = open_elec if isinstance(open_elec, bool) else False
         self.up_selection_reply = (
@@ -527,7 +530,7 @@ class VideoMeta:
             "dynamic": self.dynamic,
             "interactive": 0,
             "act_reserve_create": 0,  # unknown
-            "no_disturbance": 0,  # unknown
+            "no_disturbance": 1 if self.no_disturbance else 0,  # 是否视频出现在动态中 / 视频动态推送为0，1为不推送
             "porder": None if self.porder is None else self.porder.__dict__(),
             "adorder_type": 9,  # unknown
             "no_reprint": 1 if self.no_reprint else 0,
@@ -1405,6 +1408,7 @@ class VideoEditor(AsyncEvent):
             "handle_staff": "const bool: false",
             "topic_grey": "const int: 1",
             "no_reprint": "int: 是否显示“未经允许禁止转载”. 0 否 1 是",
+            "no_disturbance": "视频不发在动态里面，1不发 ，0发",
             "subtitles # 字幕设置": {
                 "lan": "str: 字幕投稿语言，不清楚作用请将该项设置为空",
                 "open": "int: 是否启用字幕投稿，1 or 0"
