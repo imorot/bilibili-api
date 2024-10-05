@@ -85,7 +85,7 @@ def update_params_with_wbi(params):
 
    signed_params = encWbi(params=params, img_key=img_key, sub_key=sub_key)
    query = urllib.parse.urlencode(signed_params)
-   return query
+   return signed_params
 
 
 ###
