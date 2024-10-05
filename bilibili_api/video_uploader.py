@@ -1334,6 +1334,7 @@ class VideoUploader(AsyncEvent):
 
         try:
             params = {"csrf": self.credential.bili_jct, "t": time.time() * 1000}
+            print(params, "params")
             params = update_params_with_wbi(params)
             # headers = {"content-type": "application/json"}
             # 已有 json_body，似乎不需要单独设置 content-type
