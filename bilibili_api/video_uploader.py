@@ -85,7 +85,7 @@ def update_params_with_wbi(params):
 
    signed_params = encWbi(params=params, img_key=img_key, sub_key=sub_key)
    query = urllib.parse.urlencode(signed_params)
-   return signed_params
+   return query
 
 
 ###
@@ -103,7 +103,7 @@ async def upload_cover(cover: Picture, credential: Credential) -> str:
     data = {
         "cover": f'data:image/png;base64,{base64.b64encode(pic.content).decode("utf-8")}'
     }
-    return (await Api(**api, credential=credential).update_data(**data).result)["url"]
+    return (await Api(**api, ,wbi=True, credential=credential).update_data(**data).result)["url"]
 
 
 class Lines(Enum):
@@ -138,7 +138,7 @@ async def _probe() -> dict:
     测速网页 https://member.bilibili.com/preupload?r=ping
     """
     # api = _API["probe"]
-    # info = await Api(**api).update_params(r="probe").result # 不实时获取线路直接用 LINES_INFO
+    # info = await Api(**api, wbi=True).update_params(r="probe").result # 不实时获取线路直接用 LINES_INFO
     min_cost, fastest_line = 30, None
     for line in LINES_INFO.values():
         start = time.perf_counter()
@@ -269,7 +269,7 @@ async def get_available_topics(tid: int, credential: Credential) -> List[dict]:
     credential.raise_for_no_sessdata()
     api = _API["available_topics"]
     params = {"type_id": tid, "pn": 0, "ps": 200}  # 一次性获取完
-    return (await Api(**api, credential=credential).update_params(**params).result)[
+    return (await Api(**api, wbi=True, credential=credential).update_params(**params).result)[
         "topics"
     ]
 
@@ -618,7 +618,7 @@ class VideoMeta:
         包括活动等在内，固定信息已经缓存于 data/video_uploader_meta_pre.json
         """
         api = _API["pre"]
-        self.__pre_info = await Api(**api, credential=self.__credential).result
+        self.__pre_info = await Api(**api, wbi=True, credential=self.__credential).result
         return self.__pre_info
 
     def _check_tid(self) -> bool:
@@ -658,7 +658,7 @@ class VideoMeta:
         """
         api = _API["check_tag_name"]
         return (
-            await Api(**api, credential=credential, ignore_code=True)
+            await Api(**api, wbi=True, credential=credential, ignore_code=True)
             .update_params(t=name)
             .result
         )["code"] == 0
@@ -879,124 +879,6 @@ class VideoUploader(AsyncEvent):
 
         preupload["upload_id"] = data["upload_id"]
 
-        # # 读取并上传视频元数据，这段代码暂时用不上
-        # meta = ffmpeg.probe(page.path)
-        # meta_format = meta["format"]
-        # meta_video = list(map(lambda x: x if x["codec_type"] == "video" else None, meta["streams"]))
-        # meta_video.remove(None)
-        # meta_video = meta_video[0]
-
-        # meta_audio = list(map(lambda x: x if x["codec_type"] == "audio" else None, meta["streams"]))
-        # meta_audio.remove(None)
-        # meta_audio = meta_audio[0]
-
-        # meta_to_upload = json.dumps({
-        #     "code": 0,
-        #     "filename": os.path.splitext(os.path.basename(preupload["upos_uri"]))[0],
-        #     "filesize": int(meta_format["size"]),
-        #     "key_frames": [],
-        #     "meta": {
-        #         "audio_meta": meta_audio,
-        #         "video_meta": meta_video,
-        #         "container_meta": {
-        #             "duration": round(float(meta_format["duration"]), 2),
-        #             "format_name": meta_format["format_name"]
-        #         }
-        #     },
-        #     "version": "2.3.7",
-        #     "webVersion": "1.0.0"
-        # })
-
-        # # 预检元数据上传
-        # async with session.get(api["url"], params={
-        #     "name": "BUploader_meta.txt",
-        #     "size": len(meta_to_upload),
-        #     "r": "upos",
-        #     "profile": "fxmeta/bup",
-        #     "ssl": "0",
-        #     "version": "2.10.3",
-        #     "build": "2100300",
-        # }, cookies=self.credential.get_cookies(),
-        #     headers={
-        #         "User-Agent": "Mozilla/5.0",
-        #         "Referer": "https://www.bilibili.com"
-        #     }, proxy=settings.proxy
-        # ) as resp:
-        #     if resp.status >= 400:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise NetworkException(resp.status, resp.reason)
-
-        #     preupload_m = await resp.json()
-
-        #     if preupload_m['OK'] != 1:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise ApiException(json.dumps(preupload_m))
-
-        # url = self._get_upload_url(preupload_m)
-
-        # # 获取 upload_id
-        # async with session.post(url, params={
-        #     "uploads": "",
-        #     "output": "json"
-        # }, headers={
-        #     "x-upos-auth": preupload_m["auth"]
-        # }, proxy=settings.proxy) as resp:
-        #     if resp.status >= 400:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise NetworkException(resp.status, resp.reason)
-
-        #     data = json.loads(await resp.text())
-        #     if preupload_m['OK'] != 1:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise ApiException(json.dumps(preupload_m))
-
-        #     upload_id = data["upload_id"]
-
-        # size = len(meta_to_upload)
-        # async with session.put(url, params={
-        #     "partNumber": 1,
-        #     "uploadId": upload_id,
-        #     "chunk": 0,
-        #     "chunks": 1,
-        #     "size": size,
-        #     "start": 0,
-        #     "end": size,
-        #     "total": size
-        # }, headers={
-        #     "x-upos-auth": preupload_m["auth"]
-        # }, data=meta_to_upload, proxy=settings.proxy) as resp:
-        #     if resp.status >= 400:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise NetworkException(resp.status, resp.reason)
-
-        #     data = await resp.text()
-
-        #     if data != 'MULTIPART_PUT_SUCCESS':
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise ApiException(json.dumps(preupload_m))
-
-        # async with session.post(url,
-        #     data=json.dumps({"parts": [{"partNumber": 1, "eTag": "etag"}]}),
-        #     params={
-        #         "output": "json",
-        #         "name": "BUploader_meta.txt",
-        #         "profile": "",
-        #         "uploadId": upload_id,
-        #         "biz_id": ""
-        #     },
-        #     headers={
-        #         "x-upos-auth": preupload_m["auth"]
-        #     }, proxy=settings.proxy
-        # ) as resp:
-        #     if resp.status >= 400:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise NetworkException(resp.status, resp.reason)
-
-        #     data = json.loads(await resp.text())
-
-        #     if data['OK'] != 1:
-        #         self.dispatch(VideoUploaderEvents.PREUPLOAD_FAILED.value, {page: page})
-        #         raise ApiException(json.dumps(data))
 
         return preupload
 
@@ -1326,6 +1208,7 @@ class VideoUploader(AsyncEvent):
         )
         meta["cover"] = cover_url
         meta["videos"] = videos
+        print(meta, "1")
 
         self.dispatch(VideoUploaderEvents.PRE_SUBMIT.value, deepcopy(meta))
 
@@ -1334,19 +1217,24 @@ class VideoUploader(AsyncEvent):
 
         try:
             params = {"csrf": self.credential.bili_jct, "t": time.time() * 1000}
-            print(params, "params")
-            params = update_params_with_wbi(params)
+       #     params = update_params_with_wbi(params)
+            print(params)
             # headers = {"content-type": "application/json"}
             # 已有 json_body，似乎不需要单独设置 content-type
             resp = (
                 await Api(
-                    **api, credential=self.credential, no_csrf=True, json_body=True
+                    **api, wbi=True, credential=self.credential, no_csrf=True, json_body=True
                 )
                 .update_params(**params)
                 .update_data(**meta)
                 # .update_headers(**headers)
                 .result
             )
+            print(resp.meta)       
+            print(resp.params)
+                
+       
+            
             self.dispatch(VideoUploaderEvents.AFTER_SUBMIT.value, resp)
             return resp
 
@@ -1382,7 +1270,7 @@ async def get_missions(
 
     params = {"tid": tid}
 
-    return await Api(**api, credential=credential).update_params(**params).result
+    return await Api(**api, wbi=True, credential=credential).update_params(**params).result
 
 
 class VideoEditorEvents(Enum):
@@ -1494,7 +1382,7 @@ class VideoEditor(AsyncEvent):
             api = _API["upload_args"]
             params = {"bvid": self.bvid}
             self.__old_configs = (
-                await Api(**api, credential=self.credential)
+                await Api(**api, wbi=True, credential=self.credential)
                 .update_params(**params)
                 .result
             )
@@ -1542,7 +1430,7 @@ class VideoEditor(AsyncEvent):
                 "user-agent": "Mozilla/5.0",
             }
             resp = (
-                await Api(**api, credential=self.credential, no_csrf=True, json_body=True)
+                await Api(**api, wbi=True, credential=self.credential, no_csrf=True, json_body=True)
                 .update_params(**params)
                 .update_data(**data)
                 .update_headers(**headers)
