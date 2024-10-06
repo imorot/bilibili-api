@@ -103,7 +103,7 @@ async def upload_cover(cover: Picture, credential: Credential) -> str:
     data = {
         "cover": f'data:image/png;base64,{base64.b64encode(pic.content).decode("utf-8")}'
     }
-    return (await Api(**api, ,wbi=True, credential=credential).update_data(**data).result)["url"]
+    return (await Api(**api ,wbi=True, credential=credential).update_data(**data).result)["url"]
 
 
 class Lines(Enum):
