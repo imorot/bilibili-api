@@ -1230,7 +1230,7 @@ class VideoUploader(AsyncEvent):
                 # .update_headers(**headers)
                 .result
             )
-            print(resp.meta)       
+            print(resp.data)       
             print(resp.params)
                 
        
