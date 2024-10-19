@@ -619,6 +619,7 @@ class VideoMeta:
         """
         api = _API["pre"]
         self.__pre_info = await Api(**api, wbi=True, credential=self.__credential).result
+        print(Api)
         return self.__pre_info
 
     def _check_tid(self) -> bool:
